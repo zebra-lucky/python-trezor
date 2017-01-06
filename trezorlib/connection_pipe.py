@@ -18,19 +18,23 @@
 
 from __future__ import print_function
 import os
-from select import select
-from .transport import TransportV1
+import time
 
-"""PipeTransport implements fake wire transport over local named pipe.
-Use this transport for talking with trezor simulator."""
+"""PipeConnection implements fake wire connection over local named pipe.
+Use this connection for talking with trezor simulator."""
 
-class PipeTransport(TransportV1):
-    def __init__(self, device, is_device, *args, **kwargs):
+class PipeConnection(object):
+    def __init__(self, device, is_device):
+        self.device = device
         self.is_device = is_device # Set True if act as device
+        self.filename_read = None
+        self.filename_write = None
+        self.write_fd = None
+        self.write_f = None
+        self.read_fd = None
+        self.read_f = None
 
-        super(PipeTransport, self).__init__(device, *args, **kwargs)
-
-    def _open(self):
+    def open(self):
         if self.is_device:
             self.filename_read = self.device+'.to'
             self.filename_write = self.device+'.from'
@@ -50,18 +54,14 @@ class PipeTransport(TransportV1):
         self.read_fd = os.open(self.filename_read, os.O_RDWR)#|os.O_NONBLOCK)
         self.read_f = os.fdopen(self.read_fd, 'rb', 0)
 
-    def _close(self):
+    def close(self):
         self.read_f.close()
         self.write_f.close()
         if self.is_device:
             os.unlink(self.filename_read)
             os.unlink(self.filename_write)
 
-    def _ready_to_read(self):
-        rlist, _, _ = select([self.read_f], [], [], 0)
-        return len(rlist) > 0
-
-    def _write_chunk(self, chunk):
+    def write_chunk(self, chunk):
         if len(chunk) != 64:
             raise Exception("Unexpected data length")
 
@@ -72,7 +72,7 @@ class PipeTransport(TransportV1):
             print("Error while writing to socket")
             raise
 
-    def _read_chunk(self):
+    def read_chunk(self):
         while True:
             try:
                 data = self.read_f.read(64)
