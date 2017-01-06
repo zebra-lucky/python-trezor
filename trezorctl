@@ -58,6 +58,7 @@ def init_parser(commands):
     parser = argparse.ArgumentParser(description='Commandline tool for TREZOR devices.')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Prints communication to device')
     parser.add_argument('-t', '--transport', dest='transport', choices=['usb', 'udp', 'pipe', 'bridge'], default='usb', help="Transport used for talking with the device")
+    parser.add_argument('-w', '--protocol', dest='protocol', choices=['v1', 'v2'], default='', help="Wire protocol used for talking with the device")
     parser.add_argument('-p', '--path', dest='path', default='', help="Path used by the transport")
     parser.add_argument('-j', '--json', dest='json', action='store_true', help="Prints result as json object")
 
@@ -80,34 +81,53 @@ def init_parser(commands):
 
     return parser
 
-def get_transport(transport_string, path, **kwargs):
+def get_transport(transport_string, protocol_string, path):
+    from trezorlib.transport_v1 import TransportV1
+    from trezorlib.transport_v2 import TransportV2
+
     if transport_string == 'usb':
-        from trezorlib.transport_hid import HidTransport
+        from trezorlib.connection_hid import HidConnection, device_to_transport
 
-        for d in HidTransport.enumerate():
-            # Two-tuple of (normal_interface, debug_interface)
-            if path == '' or path in d:
-                return HidTransport(d, **kwargs)
+        for normal, debug in HidConnection.enumerate():
+            if path == '' or path == normal['path']:
+                device = normal
+                break
+            elif path == debug['path']:
+                device = debug
+                break
+        else:
+            raise CallException(types.Failure_Other, "Device not found")
 
-        raise CallException(types.Failure_Other, "Device not found")
+        if not protocol_string:
+            return device_to_transport(device)(HidConnection(device['path']))
+        elif protocol_string == 'v1':
+            return TransportV1(HidConnection(device['path']))
+        else:
+            return TransportV2(HidConnection(device['path']))
 
     if transport_string == 'udp':
-        from trezorlib.transport_udp import UdpTransport
-        return UdpTransport(path, **kwargs)
+        from trezorlib.connection_udp import UdpConnection
+        if protocol_string == 'v1':
+            return TransportV1(UdpConnection(path))
+        else:  # default is v2
+            return TransportV2(UdpConnection(path))
 
     if transport_string == 'pipe':
-        from trezorlib.transport_pipe import PipeTransport
+        from trezorlib.connection_pipe import PipeConnection
         if path == '':
             path = '/tmp/pipe.trezor'
-        return PipeTransport(path, is_device=False, **kwargs)
+        if protocol_string == 'v2':
+            return TransportV2(PipeConnection(path, is_device=False))
+        else:  # default is v1
+            return TransportV1(PipeConnection(path, is_device=False))
 
     if transport_string == 'bridge':
-        from trezorlib.transport_bridge import BridgeTransport
+        from trezorlib.transport_bridge import TransportBridge
 
-        devices = BridgeTransport.enumerate()
+        devices = TransportBridge.enumerate()
         for d in devices:
             if path == '' or d['path'] == binascii.hexlify(path):
-                return BridgeTransport(d, **kwargs)
+                return TransportBridge(d)
 
         raise CallException(types.Failure_Other, "Device not found")
 
@@ -530,7 +550,7 @@ class Commands(object):
     )
 
 def list_usb():
-    from trezorlib.transport_hid import HidTransport
+    from trezorlib.connection_hid import HidTransport
     return HidTransport.enumerate()
 
 def main():
@@ -555,7 +575,7 @@ def main():
                         print(dev[0])
             return
 
-        transport = get_transport(args.transport, args.path)
+        transport = get_transport(args.transport, args.protocol, args.path)
         if args.verbose:
             client = TrezorClientDebug(transport)
         else:

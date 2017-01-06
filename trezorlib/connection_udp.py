@@ -16,14 +16,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-'''UDP Socket implementation of Transport.'''
+'''UDP Socket implementation of Connection.'''
 
 import socket
-from select import select
-from .transport import TransportV2, ConnectionError
 
-class UdpTransport(TransportV2):
-    def __init__(self, device, *args, **kwargs):
+class UdpConnection(object):
+    def __init__(self, device):
         device = device.split(':')
         if len(device) < 2:
             if not device[0]:
@@ -33,30 +31,25 @@ class UdpTransport(TransportV2):
                 device = ('127.0.0.1', int(device[0]))
         else:
             device = (device[0], int(device[1]))
-
+        self.device = device
         self.socket = None
-        super(UdpTransport, self).__init__(device, *args, **kwargs)
 
-    def _open(self):
+    def open(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.connect(self.device)
         self.socket.settimeout(10)
 
-    def _close(self):
+    def close(self):
         self.socket.close()
         self.socket = None
 
-    def _ready_to_read(self):
-        rlist, _, _ = select([self.socket], [], [], 0)
-        return len(rlist) > 0
-
-    def _write_chunk(self, chunk):
+    def write_chunk(self, chunk):
         if len(chunk) != 64:
             raise Exception("Unexpected data length")
 
         self.socket.sendall(chunk)
 
-    def _read_chunk(self):
+    def read_chunk(self):
         while True:
             try:
                 data = self.socket.recv(64)

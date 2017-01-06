@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-'''BridgeTransport implements transport TREZOR Bridge (aka trezord).'''
+'''BridgeTransport implements transport through TREZOR Bridge (aka trezord).'''
 
 import json
 import requests
 from . import protobuf_json
 from . import messages_pb2 as proto
-from .transport import TransportV1
+from .transport import Transport
 
 TREZORD_HOST = 'https://localback.net:21324'
 CONFIG_URL = 'https://wallet.trezor.io/data/config_signed.bin'
@@ -31,17 +31,15 @@ CONFIG_URL = 'https://wallet.trezor.io/data/config_signed.bin'
 def get_error(resp):
     return ' (error=%d str=%s)' % (resp.status_code, resp.json()['error'])
 
-class BridgeTransport(TransportV1):
-    def __init__(self, device, *args, **kwargs):
-        self.configure()
+class TransportBridge(Transport):
 
-        self.path = device['path']
-
-        self.session = None
-        self.response = None
+    def __init__(self, path):
+        Transport.__init__(self)
+        self.path = path
         self.conn = requests.Session()
-
-        super(BridgeTransport, self).__init__(device, *args, **kwargs)
+        self.response = None
+        self.configure()
+        self._open()
 
     @staticmethod
     def configure():
@@ -74,25 +72,21 @@ class BridgeTransport(TransportV1):
         if r.status_code != 200:
             raise Exception('trezord: Could not acquire session' + get_error(r))
         resp = r.json()
-        self.session = resp['session']
+        self.session_id = resp['session']
 
-    def _close(self):
-        r = self.conn.post(TREZORD_HOST + '/release/%s' % self.session)
+    def close(self):
+        r = self.conn.post(TREZORD_HOST + '/release/%s' % self.session_id)
         if r.status_code != 200:
             raise Exception('trezord: Could not release session' + get_error(r))
         else:
-            self.session = None
-
-    def _ready_to_read(self):
-        return self.response != None
+            self.session_id = None
 
     def write(self, protobuf_msg):
-        # Override main 'write' method, HTTP transport cannot be
-        # splitted to chunks
+        # Override main 'write' method, HTTP transport cannot be splitted to chunks
         cls = protobuf_msg.__class__.__name__
         msg = protobuf_json.pb2json(protobuf_msg)
         payload = '{"type": "%s", "message": %s}' % (cls, json.dumps(msg))
-        r = self.conn.post(TREZORD_HOST + '/call/%s' % self.session, data=payload)
+        r = self.conn.post(TREZORD_HOST + '/call/%s' % self.session_id, data=payload)
         if r.status_code != 200:
             raise Exception('trezord: Could not write message' + get_error(r))
         else:
