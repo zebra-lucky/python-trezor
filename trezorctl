@@ -57,7 +57,7 @@ ether_units = {
 def init_parser(commands):
     parser = argparse.ArgumentParser(description='Commandline tool for TREZOR devices.')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Prints communication to device')
-    parser.add_argument('-t', '--transport', dest='transport', choices=['usb', 'udp', 'pipe', 'bridge'], default='usb', help="Transport used for talking with the device")
+    parser.add_argument('-t', '--transport', dest='transport', choices=['hid', 'udp', 'pipe', 'bridge'], default='hid', help="Transport used for talking with the device")
     parser.add_argument('-w', '--protocol', dest='protocol', choices=['v1', 'v2'], default='', help="Wire protocol used for talking with the device")
     parser.add_argument('-p', '--path', dest='path', default='', help="Path used by the transport")
     parser.add_argument('-j', '--json', dest='json', action='store_true', help="Prints result as json object")
@@ -85,7 +85,7 @@ def get_transport(transport_string, protocol_string, path):
     from trezorlib.transport_v1 import TransportV1
     from trezorlib.transport_v2 import TransportV2
 
-    if transport_string == 'usb':
+    if transport_string == 'hid':
         from trezorlib.connection_hid import HidConnection, device_to_transport
 
         for normal, debug in HidConnection.enumerate():
@@ -549,7 +549,7 @@ class Commands(object):
         (('-s', '--skip-check'), {'action': 'store_true', 'default': False}),
     )
 
-def list_usb():
+def list_hid():
     from trezorlib.connection_hid import HidTransport
     return HidTransport.enumerate()
 
@@ -564,7 +564,7 @@ def main():
     try:
 
         if args.cmd == 'list':
-            devices = list_usb()
+            devices = list_hid()
             if args.json:
                 print(json.dumps(devices))
             else:
