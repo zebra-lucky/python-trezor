@@ -57,7 +57,7 @@ ether_units = {
 def init_parser(commands):
     parser = argparse.ArgumentParser(description='Commandline tool for TREZOR devices.')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Prints communication to device')
-    parser.add_argument('-t', '--transport', dest='transport', choices=['hid', 'udp', 'pipe', 'bridge'], default='hid', help="Transport used for talking with the device")
+    parser.add_argument('-t', '--transport', dest='transport', choices=['hid', 'udp', 'bridge'], default='hid', help="Transport used for talking with the device")
     parser.add_argument('-w', '--protocol', dest='protocol', choices=['v1', 'v2'], default='', help="Wire protocol used for talking with the device")
     parser.add_argument('-p', '--path', dest='path', default='', help="Path used by the transport")
     parser.add_argument('-j', '--json', dest='json', action='store_true', help="Prints result as json object")
@@ -111,15 +111,6 @@ def get_transport(transport_string, protocol_string, path):
             return TransportV1(UdpConnection(path))
         else:  # default is v2
             return TransportV2(UdpConnection(path))
-
-    if transport_string == 'pipe':
-        from trezorlib.connection_pipe import PipeConnection
-        if path == '':
-            path = '/tmp/pipe.trezor'
-        if protocol_string == 'v2':
-            return TransportV2(PipeConnection(path, is_device=False))
-        else:  # default is v1
-            return TransportV1(PipeConnection(path, is_device=False))
 
     if transport_string == 'bridge':
         from trezorlib.transport_bridge import TransportBridge
