@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-'''USB HID implementation of Connection.'''
+'''USB HID implementation of Device.'''
 
 import hid
 import time
@@ -42,7 +42,8 @@ def device_to_transport(device):
         raise Exception("Unknown transport for %s" % device)
     return transport
 
-class HidConnection(object):
+class HidDevice(Device):
+
     def __init__(self, device, hid_version=None):
         self.path = device['path']
         self.hid_version = hid_version  # None, 1, 2
@@ -106,7 +107,7 @@ class HidConnection(object):
 
     def write_chunk(self, chunk):
         if len(chunk) != 64:
-            raise Exception("Unexpected data length")
+            raise Exception('Unexpected data length')
 
         if self.hid_version == 2:
             self.hid.write(b'\0' + chunk)
@@ -133,6 +134,6 @@ class HidConnection(object):
             break
 
         if len(data) != 64:
-            raise Exception("Unexpected chunk size: %d" % len(data))
+            raise Exception('Unexpected chunk size: %d' % len(data))
 
         return bytearray(data)

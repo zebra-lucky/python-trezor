@@ -18,7 +18,8 @@
 
 from . import mapping
 
-class Transport(object):
+class Protocol(object):
+
     def __init__(self):
         self.session_id = 0
         self.session_depth = 0

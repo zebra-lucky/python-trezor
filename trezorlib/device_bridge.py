@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-'''BridgeTransport implements transport through TREZOR Bridge (aka trezord).'''
+'''BridgeDevice implements transport through TREZOR Bridge (aka trezord).'''
 
 import json
 import requests
 from . import protobuf_json
 from . import messages_pb2 as proto
-from .transport import Transport
+from .device import Device
 
 TREZORD_HOST = 'https://localback.net:21324'
 CONFIG_URL = 'https://wallet.trezor.io/data/config_signed.bin'
@@ -31,10 +31,10 @@ CONFIG_URL = 'https://wallet.trezor.io/data/config_signed.bin'
 def get_error(resp):
     return ' (error=%d str=%s)' % (resp.status_code, resp.json()['error'])
 
-class TransportBridge(Transport):
+class BridgeDevice(Device):
 
     def __init__(self, path):
-        Transport.__init__(self)
+        Device.__init__(self)
         self.path = path
         self.conn = requests.Session()
         self.response = None

@@ -59,7 +59,7 @@ def init_parser(commands):
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Prints communication to device')
     parser.add_argument('-t', '--transport', dest='transport', choices=['hid', 'udp', 'bridge'], default='hid', help="Transport used for talking with the device")
     parser.add_argument('-w', '--protocol', dest='protocol', choices=['v1', 'v2'], default='', help="Wire protocol used for talking with the device")
-    parser.add_argument('-p', '--path', dest='path', default='', help="Path used by the transport")
+    parser.add_argument('-p', '--path', dest='path', help="Path used by the transport")
     parser.add_argument('-j', '--json', dest='json', action='store_true', help="Prints result as json object")
 
     cmdparser = parser.add_subparsers(title='Available commands')
@@ -541,8 +541,8 @@ class Commands(object):
     )
 
 def list_hid():
-    from trezorlib.connection_hid import HidTransport
-    return HidTransport.enumerate()
+    from trezorlib.device_hid import HidDevice
+    return HidDevice.enumerate()
 
 def main():
     parser = init_parser(Commands)
@@ -560,10 +560,10 @@ def main():
                 print(json.dumps(devices))
             else:
                 for dev in devices:
-                    if dev[1] != None:
-                        print("%s - debuglink enabled" % dev[0])
+                    if dev.has_debuglink:
+                        print('path: %s (debuglink enabled)' % dev.path)
                     else:
-                        print(dev[0])
+                        print('path: %s' % dev.path)
             return
 
         transport = get_transport(args.transport, args.protocol, args.path)

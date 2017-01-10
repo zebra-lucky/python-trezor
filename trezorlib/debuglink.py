@@ -19,7 +19,6 @@
 from __future__ import print_function
 
 from . import messages_pb2 as proto
-from .transport import NotImplementedException
 
 def pin_info(pin):
     print("Device asks for PIN %s" % pin)

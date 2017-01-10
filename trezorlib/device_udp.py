@@ -16,47 +16,55 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-'''UDP Socket implementation of Connection.'''
+'''UDP Socket implementation of Device'''
 
 import socket
 
-class UdpConnection(object):
-    def __init__(self, device):
-        device = device.split(':')
-        if len(device) < 2:
-            if not device[0]:
-                # Default port used by trezor v2
-                device = ('127.0.0.1', 21324)
-            else:
-                device = ('127.0.0.1', int(device[0]))
-        else:
-            device = (device[0], int(device[1]))
-        self.device = device
-        self.socket = None
+class UdpDevice(object):
+
+    def __init__(self, path):
+        super(UdpDevice, self).__init__(path)
+        self.sock = None
+
+    @staticmethod
+    def enumerate():
+        devices = []
+        DEFAULT = ('127.0.0.1', 21324) # default host and port
+        for path in [DEFAULT]:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.connect(path)
+                sock.settimeout(10)
+                sock.sendall(b'PINGPING')
+                data = sock.recv(8)
+                if data == b'PONGPONG':
+                    devices.append(path)
+                sock.close()
+            except:
+                pass
+        return devices
 
     def open(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.connect(self.device)
-        self.socket.settimeout(10)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.connect(self.path)
+        self.sock.settimeout(10)
 
     def close(self):
-        self.socket.close()
-        self.socket = None
+        self.sock.close()
+        self.sock = None
 
     def write_chunk(self, chunk):
         if len(chunk) != 64:
-            raise Exception("Unexpected data length")
-
-        self.socket.sendall(chunk)
+            raise Exception('Unexpected data length')
+        self.sock.sendall(chunk)
 
     def read_chunk(self):
         while True:
             try:
-                data = self.socket.recv(64)
+                data = self.sock.recv(64)
                 break
             except socket.timeout:
                 continue
         if len(data) != 64:
-            raise Exception("Unexpected chunk size: %d" % len(data))
-
+            raise Exception('Unexpected chunk size: %d' % len(data))
         return bytearray(data)

@@ -17,11 +17,12 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import struct
-from .transport import Transport
+from .transport import Protocol
 
-class TransportV1(Transport):
+class ProtocolV1(Protocol):
+
     def __init__(self, conn):
-        Transport.__init__(self)
+        Protocol.__init__(self)
         self.conn = conn
         self.conn.open()
 

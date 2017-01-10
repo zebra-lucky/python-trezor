@@ -18,11 +18,12 @@
 
 import struct
 import binascii
-from .transport import Transport
+from .transport import Protocol
 
-class TransportV2(Transport):
+class ProtocolV2(Protocol):
+
     def __init__(self, conn):
-        Transport.__init__(self)
+        Protocol.__init__(self)
         self.conn = conn
         self.conn.open()
 
