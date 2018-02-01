@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import struct
 import binascii
@@ -33,6 +33,7 @@ class ConnectionError(Exception):
 
 class Transport(object):
     def __init__(self, device, *args, **kwargs):
+        print('Transport.__init__')
         self.device = device
         self.session_id = 0
         self.session_depth = 0
@@ -42,6 +43,7 @@ class Transport(object):
         """
         Apply a lock to the device in order to preform synchronous multistep "conversations" with the device.  For example, before entering the transaction signing workflow, one begins a session.  After the transaction is complete, the session may be ended.
         """
+        print('Transport.session_begin')
         if self.session_depth == 0:
             self._session_begin()
         self.session_depth += 1
@@ -50,6 +52,7 @@ class Transport(object):
         """
         End a session.  Se session_begin for an in depth description of TREZOR sessions.
         """
+        print('Transport.session_end')
         self.session_depth -= 1
         self.session_depth = max(0, self.session_depth)
         if self.session_depth == 0:
@@ -59,12 +62,14 @@ class Transport(object):
         """
         Close the connection to the physical device or file descriptor represented by the Transport.
         """
+        print('Transport.close')
         self._close()
 
     def write(self, msg):
         """
         Write mesage to tansport.  msg should be a member of a valid `protobuf class <https://developers.google.com/protocol-buffers/docs/pythontutorial>`_ with a SerializeToString() method.
         """
+        print('Transport.write')
         raise NotImplementedException("Not implemented")
 
     def read(self):
@@ -72,6 +77,7 @@ class Transport(object):
         If there is data available to be read from the transport, reads the data and tries to parse it as a protobuf message.  If the parsing succeeds, return a protobuf object.
         Otherwise, returns None.
         """
+        print('Transport.read')
         if not self._ready_to_read():
             return None
 
@@ -85,6 +91,7 @@ class Transport(object):
         """
         Same as read, except blocks until data is available to be read.
         """
+        print('Transport.read_blocking')
         while True:
             data = self._read()
             if data is not None:
@@ -93,6 +100,7 @@ class Transport(object):
         return self._parse_message(data)
 
     def _parse_message(self, data):
+        print('Transport._parse_message')
         (session_id, msg_type, data) = data
 
         # Raise exception if we get the response with unexpected session ID
@@ -109,32 +117,40 @@ class Transport(object):
 
     # Functions to be implemented in specific transports:
     def _open(self):
+        print('Transport._open')
         raise NotImplementedException("Not implemented")
 
     def _close(self):
+        print('Transport._close')
         raise NotImplementedException("Not implemented")
 
     def _write_chunk(self, chunk):
+        print('Transport._write_chunk')
         raise NotImplementedException("Not implemented")
 
     def _read_chunk(self):
+        print('Transport._read_chunk')
         raise NotImplementedException("Not implemented")
 
     def _ready_to_read(self):
         """
         Returns True if there is data to be read from the transport.  Otherwise, False.
         """
+        print('Transport._ready_to_read')
         raise NotImplementedException("Not implemented")
 
     def _session_begin(self):
+        print('Transport._session_begin')
         pass
 
     def _session_end(self):
+        print('Transport._session_end')
         pass
 
 
 class TransportV1(Transport):
     def write(self, msg):
+        print('TransportV1.write')
         ser = msg.SerializeToString()
         header = struct.pack(">HL", mapping.get_type(msg), len(ser))
         data = bytearray(b"##" + header + ser)
@@ -146,6 +162,7 @@ class TransportV1(Transport):
             data = data[63:]
 
     def _read(self):
+        print('TransportV1._read')
         chunk = self._read_chunk()
         (msg_type, datalen, data) = self.parse_first(chunk)
 
@@ -158,6 +175,7 @@ class TransportV1(Transport):
         return (0, msg_type, data)
 
     def parse_first(self, chunk):
+        print('TransportV1.parse_first')
         if chunk[:3] != b"?##":
             raise Exception("Unexpected magic characters")
 
@@ -171,6 +189,7 @@ class TransportV1(Transport):
         return (msg_type, datalen, data)
 
     def parse_next(self, chunk):
+        print('TransportV1.parse_next')
         if chunk[0:1] != b"?":
             raise Exception("Unexpected magic characters")
 

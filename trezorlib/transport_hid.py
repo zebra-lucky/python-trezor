@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 '''USB HID implementation of Transport.'''
 
 import time
@@ -65,6 +66,7 @@ def path_to_transport(path):
 
 class _HidTransport(object):
     def __init__(self, device, *args, **kwargs):
+        print('_HIDTransport.__init__')
         self.hid = None
         self.hid_version = None
 
@@ -75,12 +77,14 @@ class _HidTransport(object):
         """
         Check if the device is still connected.
         """
+        print('_HIDTransport.is_connected')
         for d in hid.enumerate(0, 0):
             if d['path'] == self.device:
                 return True
         return False
 
     def _open(self):
+        print('_HIDTransport._open')
         self.hid = hid.device()
         self.hid.open_path(self.device)
         self.hid.set_nonblocking(True)
@@ -100,19 +104,22 @@ class _HidTransport(object):
             raise ConnectionError("Unknown HID version")
 
     def _close(self):
+        print('_HIDTransport._close')
         self.hid.close()
         self.hid = None
 
     def _write_chunk(self, chunk):
+        print('_HIDTransport._write_chunk hid %s' % self.hid_version)
         if len(chunk) != 64:
             raise Exception("Unexpected data length")
 
         if self.hid_version == 2:
-            self.hid.write(b'\0' + chunk)
+            self.hid.write(b'\0' + bytearray(chunk))
         else:
             self.hid.write(chunk)
 
     def _read_chunk(self):
+        print('_HIDTransport._read_chunk')
         start = time.time()
 
         while True:
